@@ -24,42 +24,29 @@ instrumentTree = (node, parent=null, depth=0) =>
     # pre operation
         
     # run for every child
-    # node.eachChild (child)=>instrumentTree child, node, depth+1
-    if nodeType(node) is "Array"
-      for i in [0...node.length]
-          node[i] = instrumentTree node[i], node, depth+1
-    else if node.children?
-      for attr in node.children
-        if node[attr]?
-          node[attr] = instrumentTree node[attr], node, depth+1
+    node.eachChild (child)=>instrumentTree child, node, depth+1
     
     # post operation
     if nodeType(node) is "If" and node.isChain
       node.isChain = false
-    if nodeType(node) is "Code" # add the instrumented line in the first line function body to indicate enter
+    if nodeType(node) is "Code"
       line = node.locationData.first_line + 1
       column = node.locationData.first_column
+      # add the instrumented line in the finally block to indicate enter
+      tryNode = coffee.nodes("try {} finally {}").expressions[0]
+      fixLocationData tryNode, line
+      instrumentedLine = coffee.nodes("ide.trace({line:#{line},column:#{column},type:'exit'})")
+      fixLocationData instrumentedLine, line      
+      tryNode.ensure = instrumentedLine
+      tryNode.attempt = node.body
+      blockNode = coffee.nodes("")
+      fixLocationData blockNode, line
+      blockNode.push(tryNode)
+      # add the instrumented line in the first line function body to indicate enter
       instrumentedLine = coffee.nodes("ide.trace({line:#{line},column:#{column},type:'enter'})")
       fixLocationData instrumentedLine, line
-      node.body.expressions.splice(0, 0, instrumentedLine)
-    if nodeType(node) is "Call" # add the instrumented line after every function call to indicate exit
-      line = node.locationData.first_line + 1
-      column = node.locationData.first_column
-      block = coffee.nodes("")
-      fixLocationData block, line
-      assign = coffee.nodes("__=__").expressions[0]
-      fixLocationData assign, line
-      assign.value = node
-      block.push(assign)
-      instrumentedLine = coffee.nodes("ide.trace({line:#{line},column:#{column},type:'exit'})")
-      fixLocationData instrumentedLine, line
-      block.push(instrumentedLine)
-      variable = coffee.nodes("__").expressions[0]
-      fixLocationData variable, line
-      block.push(variable)
-      value = coffee.nodes("(1)").expressions[0]
-      value.base.body = block
-      node = value
+      blockNode.expressions.splice(0, 0, instrumentedLine)
+      node.body = blockNode
       
   else
     children = node.expressions
@@ -71,12 +58,11 @@ instrumentTree = (node, parent=null, depth=0) =>
       instrumentedLine = coffee.nodes("ide.trace({line:#{line},column:#{column},type:''})")
       fixLocationData instrumentedLine, line
       children.splice childIndex, 0, instrumentedLine
-      children[childIndex+1] = instrumentTree expr, node, depth+1
+      instrumentTree expr, node, depth+1
       childIndex += 2
 
-  return node
+instrumentTree ast
 
-ast = instrumentTree ast
 # console.log ast.toString()
 js = ast.compile {}
 console.log js

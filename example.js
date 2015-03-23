@@ -1,5 +1,5 @@
 (function() {
-  var __, cubes, grade, list, math, num, number, opposite, score, square;
+  var cubes, grade, list, math, num, number, opposite, score, square;
 
   ide.trace({
     line: 2,
@@ -84,12 +84,20 @@
       column: 9,
       type: 'enter'
     });
-    ide.trace({
-      line: 14,
-      column: 16,
-      type: ''
-    });
-    return x * x;
+    try {
+      ide.trace({
+        line: 14,
+        column: 16,
+        type: ''
+      });
+      return x * x;
+    } finally {
+      ide.trace({
+        line: 14,
+        column: 9,
+        type: 'exit'
+      });
+    }
   };
 
   ide.trace({
@@ -110,22 +118,25 @@
     root: Math.sqrt,
     square: square,
     cube: function(x) {
-      var __;
       ide.trace({
         line: 19,
         column: 10,
         type: 'enter'
       });
-      ide.trace({
-        line: 19,
-        column: 17,
-        type: ''
-      });
-      return x * (__ = square(x), ide.trace({
-        line: 19,
-        column: 21,
-        type: 'exit'
-      }), __);
+      try {
+        ide.trace({
+          line: 19,
+          column: 17,
+          type: ''
+        });
+        return x * square(x);
+      } finally {
+        ide.trace({
+          line: 19,
+          column: 10,
+          type: 'exit'
+        });
+      }
     }
   };
 
@@ -150,11 +161,7 @@
         column: 9,
         type: ''
       });
-      results.push((__ = math.cube(num), ide.trace({
-        line: 20,
-        column: 9,
-        type: 'exit'
-      }), __));
+      results.push(math.cube(num));
     }
     return results;
   })());
